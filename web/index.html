@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <title>SimplePaymentChannel — demo</title>
+  </head>
+  <body>
+    <h2>Payment Channel Demo</h2>
+    <button id="connect">Connect Wallet (Alice)</button>
+    <button id="sign" disabled>Sign Payment (1 ETH)</button>
+    <button id="verify" disabled>Verify Signature (Bob)</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+      import { ethers } from "https://esm.sh/ethers@6";
+      import { signPayment } from "./src/sign.js";
+      import { verifyPayment } from "./src/verify.js";
+
+      const CONTRACT_ADDRESS = "0x..."; // tu contrato deployado
+      const ESCROWED = ethers.parseEther("10");
+
+      let provider, signer, lastSignature, lastAmount;
+      const log = (msg) =>
+        (document.getElementById("output").textContent += msg + "\n");
+
+      document.getElementById("connect").onclick = async () => {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        log("Connected as: " + (await signer.getAddress()));
+        document.getElementById("sign").disabled = false;
+      };
+
+      document.getElementById("sign").onclick = async () => {
+        lastAmount = ethers.parseEther("1");
+        lastSignature = await signPayment(CONTRACT_ADDRESS, lastAmount, signer);
+        log("Signature: " + lastSignature);
+        document.getElementById("verify").disabled = false;
+      };
+
+      document.getElementById("verify").onclick = async () => {
+        const sender = await signer.getAddress();
+        const result = verifyPayment(
+          CONTRACT_ADDRESS,
+          lastAmount,
+          lastSignature,
+          sender,
+          ESCROWED,
+        );
+        log(
+          "Valid: " +
+            result.valid +
+            (result.reason ? " — " + result.reason : ""),
+        );
+      };
+    </script>
+  </body>
+</html>
